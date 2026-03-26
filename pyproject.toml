@@ -1,0 +1,26 @@
+﻿[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "qwen3-vtuber-tts-server"
+version = "0.1.0"
+description = "OpenAI-compatible Qwen3 TTS server and voice prompt generator for Open-LLM-VTuber."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = [
+    "fastapi>=0.115,<1",
+    "numpy>=1.26,<3",
+    "qwen-tts>=0.1.1",
+    "soundfile>=0.12,<1",
+    "torch>=2.6,<3",
+    "uvicorn[standard]>=0.30,<1",
+]
+
+[project.scripts]
+qwen3-vtuber-tts = "qwen3_vtuber_tts.__main__:main"
+qwen3-vtuber-tts-prompt = "qwen3_vtuber_tts.create_voice_prompt:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
