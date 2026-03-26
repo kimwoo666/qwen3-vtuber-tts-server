@@ -225,6 +225,19 @@ Generate a prompt asset first, or point `QWEN3_TTS_ASSET_DIR` at the directory t
 - Try `QWEN3_TTS_DTYPE=float32` if half precision is not stable on your setup
 - Disable warmup with `qwen3-vtuber-tts --skip-warmup` when debugging startup
 
+### Windows path issues
+
+If Qwen3-TTS reports that your local model path looks like an invalid Hugging Face repo id, your model or asset directory probably contains non-ASCII characters.
+
+- Move the model and asset directories to an ASCII-only path, or
+- Create an ASCII junction/symlink and point `QWEN3_TTS_BASE_MODEL_DIR` / `QWEN3_TTS_ASSET_DIR` there instead
+
+For example, on Windows you can create an ASCII junction with:
+
+```powershell
+cmd /c mklink /J C:\qwen3-tts-base "C:\path\to\Qwen3-TTS-12Hz-1.7B-Base"
+```
+
 ## Privacy note
 
 Reference audio and generated prompt assets may contain personally identifiable voice information. Treat them as private biometric data and avoid committing them to GitHub.

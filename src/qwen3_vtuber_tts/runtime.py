@@ -4,6 +4,7 @@ import asyncio
 import gc
 import io
 import json
+import os
 import pickle
 from pathlib import Path
 from typing import Any, Dict, Tuple
@@ -97,6 +98,15 @@ def _clear_torch_cache() -> None:
         torch_module.cuda.empty_cache()
 
 
+def _raise_path_hint_if_needed(path: Path, exc: Exception) -> None:
+    if os.name == "nt" and not str(path).isascii():
+        raise RuntimeDependencyError(
+            "Qwen3-TTS failed to load a local model from a Windows path that contains "
+            "non-ASCII characters. Move the model or assets to an ASCII-only path, or "
+            "create an ASCII junction/symlink and point the server there."
+        ) from exc
+
+
 class QwenVoiceRuntime:
     def __init__(self, settings: ServerSettings) -> None:
         self.settings = settings
@@ -119,12 +129,16 @@ class QwenVoiceRuntime:
         device, dtype = _resolve_device_and_dtype(
             self.settings.device, self.settings.dtype
         )
-        self._model = model_class.from_pretrained(
-            str(self.settings.base_model_dir),
-            device_map=device,
-            dtype=dtype,
-            attn_implementation=self.settings.attn_implementation,
-        )
+        try:
+            self._model = model_class.from_pretrained(
+                str(self.settings.base_model_dir),
+                device_map=device,
+                dtype=dtype,
+                attn_implementation=self.settings.attn_implementation,
+            )
+        except Exception as exc:
+            _raise_path_hint_if_needed(self.settings.base_model_dir, exc)
+            raise
         self._loaded = True
         return self._model
 
@@ -165,12 +179,16 @@ def create_voice_assets(settings: PromptSettings) -> Dict[str, str]:
     design_device, design_dtype = _resolve_device_and_dtype(
         settings.device, settings.dtype
     )
-    design_model = model_class.from_pretrained(
-        str(settings.voice_design_model_dir),
-        device_map=design_device,
-        dtype=design_dtype,
-        attn_implementation=settings.attn_implementation,
-    )
+    try:
+        design_model = model_class.from_pretrained(
+            str(settings.voice_design_model_dir),
+            device_map=design_device,
+            dtype=design_dtype,
+            attn_implementation=settings.attn_implementation,
+        )
+    except Exception as exc:
+        _raise_path_hint_if_needed(settings.voice_design_model_dir, exc)
+        raise
     ref_wavs, ref_sample_rate = design_model.generate_voice_design(
         text=settings.reference_text,
         language=settings.language,
@@ -181,12 +199,16 @@ def create_voice_assets(settings: PromptSettings) -> Dict[str, str]:
     _clear_torch_cache()
 
     base_device, base_dtype = _resolve_device_and_dtype(settings.device, settings.dtype)
-    base_model = model_class.from_pretrained(
-        str(settings.base_model_dir),
-        device_map=base_device,
-        dtype=base_dtype,
-        attn_implementation=settings.attn_implementation,
-    )
+    try:
+        base_model = model_class.from_pretrained(
+            str(settings.base_model_dir),
+            device_map=base_device,
+            dtype=base_dtype,
+            attn_implementation=settings.attn_implementation,
+        )
+    except Exception as exc:
+        _raise_path_hint_if_needed(settings.base_model_dir, exc)
+        raise
     voice_clone_prompt = base_model.create_voice_clone_prompt(
         ref_audio=(ref_wavs[0], ref_sample_rate),
         ref_text=settings.reference_text,
